@@ -1,0 +1,869 @@
+"""
+
+
+
+An implementation of the algorithms in:
+"Participatory Budgeting with Cumulative Votes", by Piotr Skowron, Arkadii Slinko, Stanisaw Szufa,
+Nimrod Talmon (2020), https://arxiv.org/pdf/2009.02690
+Programmer: Achiya Ben Natan
+Changes: Kacper Harasimowicz
+Date: 2024/05/16.
+"""
+
+from __future__ import annotations
+
+import math
+import warnings
+
+from collections.abc import Callable, Iterable
+from enum import Enum
+
+from pabutools.election.instance import Instance, Project
+from pabutools.election.ballot import CumulativeBallot
+from pabutools.election.profile.cumulativeprofile import ( CumulativeProfile, AbstractCumulativeProfile )
+from pabutools.fractions import frac
+from pabutools.rules.budgetallocation import BudgetAllocation
+from pabutools.tiebreaking import TieBreakingRule, lexico_tie_breaking
+from pabutools.utils import Numeric
+
+import pabutools.fractions
+
+
+###################################################################
+#                                                                 #
+#                     Main algorithm                              #
+#                                                                 #
+###################################################################
+
+
+class CSTV_Combination(Enum):
+    EWT = 1
+    """
+    Project selection via greedy-by-excess; eligible projects selected via greedy-by-excess;
+    elimination with transfer used if no eligible projects; and reverse elimination as post-processing method.
+    """
+
+    EWTC = 2
+    """
+    Project selection via greedy-by-support-over-cost; eligible projects selected via greedy-by-support-over-cost;
+    elimination with transfer used if no eligible projects; and reverse elimination as post-processing method.
+    """
+
+    MT = 3
+    """
+    Project selection via greedy-by-excess; eligible projects selected via greedy-by-excess;
+    minimal transfer used if no eligible projects; and acceptance of under-supported projects as post-processing method.
+    """
+
+    MTC = 4
+    """
+    Project selection via greedy-by-support-over-cost; eligible projects selected via greedy-by-support-over-cost
+    minimal transfer used if no eligible projects; and acceptance of under-supported projects as post-processing method.
+    """
+
+    EWTS = 5
+    """
+    Project selection via greedy-by-support; eligible projects selected via greedy-by-support;
+    elimination with transfer used if no eligible projects; and reverse elimination as post-processing method.
+    """
+
+    MTS = 6
+    """
+    Project selection via greedy-by-support; eligible projects selected via greedy-by-support;
+    minimal transfer used if no eligible projects; and acceptance of under-supported projects as post-processing method.
+    """
+
+def cstv(
+    instance: Instance,
+    profile: AbstractCumulativeProfile,
+    combination: CSTV_Combination = None,
+    select_project_to_fund_func: Callable = None,
+    eligible_projects_func: Callable = None,
+    no_eligible_project_func: Callable = None,
+    exhaustiveness_postprocess_func: Callable = None,
+    initial_budget_allocation: Iterable[Project] | None = None,
+    tie_breaking: TieBreakingRule | None = None,
+    resoluteness: bool = True,
+    verbose: bool = False,
+) -> BudgetAllocation | list[BudgetAllocation]:
+    """
+    The CSTV (Cumulative Support Transfer Voting) budgeting algorithm determines project funding
+    based on cumulative support from donor ballots.
+    This function evaluates a list of projects and donor profiles, selecting projects for funding
+    according to the CSTV methodology.
+    It employs various procedures for project selection, eligibility determination, and handling of
+    scenarios where no eligible projects exist or to ensure inclusive maximality.
+    You can read more about the algorithm in sections 4 and 5 in the paper here:
+    https://arxiv.org/pdf/2009.02690 in sections 4 and 5.
+
+    Parameters
+    ----------
+        instance : :py:class:`~pabutools.election.instance.Instance`
+            The list of projects.
+        profile : :py:class:`~pabutools.election.profile.cumulativeprofile.AbstractCumulativeProfile`
+            The list of donor ballots.
+        combination : :py:class:`~pabutools.rules.cstv.CSTV_Combination`
+            Shortcut to use pre-defined sets of parameters (all the different procedures).
+        select_project_to_fund_func : Callable
+            The procedure to select a project for funding.
+        eligible_projects_func : Callable
+            The function to determine eligible projects.
+        no_eligible_project_func : Callable
+            The procedure when there are no eligible projects.
+        exhaustiveness_postprocess_func : Callable
+            The post procedure to handle inclusive maximality.
+        initial_budget_allocation : Iterable[:py:class:`~pabutools.election.instance.Project`]
+            An initial budget allocation, typically empty.
+        tie_breaking : :py:class:`~pabutools.tiebreaking.TieBreakingRule`, optional
+            The tie-breaking rule to use, defaults to lexico_tie_breaking.
+        resoluteness : bool, optional
+            Set to `False` to obtain an irresolute outcome, where all tied budget allocations are
+            returned. Defaults to True.
+        verbose : bool, optional
+            (De)Activate the display of additional information.
+            Defaults to `False`.
+
+    Returns
+    -------
+        BudgetAllocation
+            The list of selected projects.
+    """
+    epsilon = 1e-10
+
+    if tie_breaking is None:
+        tie_breaking = lexico_tie_breaking
+
+    if combination is not None:
+        if combination == CSTV_Combination.EWT:
+            select_project_to_fund_func = select_project_ge
+            eligible_projects_func = is_eligible_ge
+            no_eligible_project_func = elimination_with_transfers
+            exhaustiveness_postprocess_func = reverse_eliminations
+        elif combination == CSTV_Combination.EWTC:
+            select_project_to_fund_func = select_project_gsc
+            eligible_projects_func = is_eligible_gsc
+            no_eligible_project_func = elimination_with_transfers
+            exhaustiveness_postprocess_func = reverse_eliminations
+        elif combination == CSTV_Combination.MT:
+            select_project_to_fund_func = select_project_ge
+            eligible_projects_func = is_eligible_ge
+            no_eligible_project_func = minimal_transfer
+            exhaustiveness_postprocess_func = acceptance_of_under_supported_projects
+        elif combination == CSTV_Combination.MTC:
+            select_project_to_fund_func = select_project_gsc
+            eligible_projects_func = is_eligible_gsc
+            no_eligible_project_func = minimal_transfer
+            exhaustiveness_postprocess_func = acceptance_of_under_supported_projects
+        elif combination == CSTV_Combination.EWTS:
+            select_project_to_fund_func = select_project_gs
+            eligible_projects_func = is_eligible_gs
+            no_eligible_project_func = elimination_with_transfers
+            exhaustiveness_postprocess_func = reverse_eliminations
+        elif combination == CSTV_Combination.MTS:
+            select_project_to_fund_func = select_project_gs
+            eligible_projects_func = is_eligible_gs
+            no_eligible_project_func = minimal_transfer
+            exhaustiveness_postprocess_func = acceptance_of_under_supported_projects
+        else:
+            raise ValueError(
+                f"Invalid combination {combination}. Please select an element of the "
+                f"CSTV_Combination enumeration."
+            )
+    else:
+        if select_project_to_fund_func is None:
+            raise ValueError(
+                "If no combination is passed, the select_project_to_fund_func "
+                "argument needs to be used"
+            )
+        if eligible_projects_func is None:
+            raise ValueError(
+                "If no combination is passed, the eligible_projects_func "
+                "argument needs to be used"
+            )
+        if no_eligible_project_func is None:
+            raise ValueError(
+                "If no combination is passed, the no_eligible_project_func "
+                "argument needs to be used"
+            )
+        if exhaustiveness_postprocess_func is None:
+            raise ValueError(
+                "If no combination is passed, the exhaustiveness_postprocess_func "
+                "argument needs to be used"
+            )
+
+    if not resoluteness:
+        raise NotImplementedError(
+            'The "resoluteness = False" feature is not yet implemented'
+        )
+
+    if initial_budget_allocation is None:
+        initial_budget_allocation = BudgetAllocation()
+    else:
+        initial_budget_allocation = BudgetAllocation(initial_budget_allocation)
+
+    # Check if all donors donate the same amount
+    donor_sums = set([sum(donor.values()) for donor in profile])
+    if (max(donor_sums) == 0):
+        return initial_budget_allocation
+    if frac((max(donor_sums) - min(donor_sums)), max(donor_sums)) > epsilon:
+        raise ValueError(
+            "Not all donors donate the same amount. Change the donations and try again."
+        )
+
+    # Initialize the set of selected projects and eliminated projects
+    selected_projects = initial_budget_allocation
+    eliminated_projects = []
+
+    # The donations to avoid to mutate the profile passed as argument
+    donations = [
+        {p: ballot[p] * profile.multiplicity(ballot) for p in instance}
+        for ballot in profile
+    ]
+
+    current_projects = set(instance)
+    if instance.budget_limit > 0:
+        budget = instance.budget_limit
+    else:
+        budget = sum(sum(donor.values()) for donor in donations)
+    # Loop until a halting condition is met
+    while True:
+        # Calculate the total budget
+        if verbose:
+            print(f"Budget is: {budget}")
+
+        # Halting condition: if there are no more projects to consider
+        if not current_projects:
+            # Perform the inclusive maximality postprocedure
+            exhaustiveness_postprocess_func(
+                selected_projects,
+                donations,
+                eliminated_projects,
+                select_project_to_fund_func,
+                budget,
+                tie_breaking,
+            )
+            if verbose:
+                print(f"Final selected projects: {selected_projects}")
+            return selected_projects
+
+        # Log donations for each project
+        if verbose:
+            for project in current_projects:
+                total_donation = sum(donor[project] for donor in donations)
+                print(
+                    f"Donors and total donations for {project}: {total_donation}. Price: {project.cost}"
+                )
+
+        # Determine eligible projects for funding
+        eligible_projects = eligible_projects_func(current_projects, donations)
+        if verbose:
+            print(
+                f"Eligible projects: {eligible_projects}",
+            )
+
+        # If no eligible projects, execute the no-eligible-project procedure
+        while not eligible_projects:
+            flag = no_eligible_project_func(
+                current_projects,
+                donations,
+                eliminated_projects,
+                select_project_to_fund_func,
+                tie_breaking
+            )
+            if not flag:
+                # Perform the inclusive maximality postprocedure
+                if verbose:
+                    print(
+                        f"Beginning exhaustiveness postprocess\n \
+                            Remaining projects: {eligible_projects}\n \
+                            Eliminated projects: {eliminated_projects}",
+                    )
+                exhaustiveness_postprocess_func(
+                    selected_projects,
+                    donations,
+                    eliminated_projects,
+                    select_project_to_fund_func,
+                    budget,
+                    tie_breaking,
+                )
+                if verbose:
+                    print(f"Final selected projects: {selected_projects}")
+                return selected_projects
+            eligible_projects = eligible_projects_func(current_projects, donations)
+            if verbose:
+                for project in current_projects:
+                    total_donation = sum(donor[project] for donor in donations)
+                    print(
+                        f"Donors and total donations for {project}: {total_donation}. Price: {project.cost}"
+                    )
+
+        # Choose one project to fund according to the project-to-fund selection procedure
+        tied_projects = select_project_to_fund_func(
+            eligible_projects, donations
+        )
+        if len(tied_projects) > 1:
+            p = tie_breaking.untie(current_projects, profile, tied_projects)
+        else:
+            p = tied_projects[0]
+        excess_support = sum(donor.get(p.name, 0) for donor in donations) - p.cost
+        if verbose:
+            print(f"Excess support for {p}: {excess_support}")
+
+        # Add the project to the selected set and remove it from further consideration
+        selected_projects.append(p)
+        current_projects.remove(p)
+        if verbose:
+            print(f"Updated selected projects: {selected_projects}")
+        budget -= p.cost
+
+        if excess_support > 0.01:
+            # Perform the excess redistribution procedure
+            gama = frac(p.cost, excess_support + p.cost)
+            excess_redistribution_procedure(current_projects, donations, p, gama)
+        else:
+            # Reset donations for the eliminated project
+            if verbose:
+                print(f"Resetting donations for eliminated project: {p}")
+            for donor in donations:
+                donor[p] = 0
+        continue
+
+
+###################################################################
+#                                                                 #
+#                     Help functions                              #
+#                                                                 #
+###################################################################
+
+
+def excess_redistribution_procedure(
+    current_projects: set[Project],
+    donors: list[dict[Project, Numeric]],
+    selected_project: Project,
+    gama: Numeric
+) -> None:
+    """
+    Distributes the excess support of a selected project to the remaining projects.
+
+    Parameters
+    ----------
+        donors : list[dict[Project, Numeric]]
+            The list of donors.
+        selected_project : Project
+            The project with the maximum excess support.
+        gama : Numeric
+            The proportion to distribute.
+
+    Returns
+    -------
+        None
+    """
+    project_support = sum(donor.get(selected_project.name, 0) for donor in donors)
+    cost = selected_project.cost
+    for donor in donors:
+        contribution = donor[selected_project]
+        total = sum(donor.values()) - contribution
+        if total == 0:
+            project_support -= contribution
+            cost -= contribution
+    if cost > 0:
+        gama = frac(cost, project_support)
+        for donor in donors: 
+            contribution =   donor[selected_project]
+            donor.pop(selected_project)
+            to_distribute = contribution * (1 - gama)
+            total = sum(donor.values())
+            if total != 0:
+                for key, donation in donor.items():
+                    part = frac(donation, total)
+                    donor[key] = donation + to_distribute * part
+
+
+def is_eligible_greedy(
+    projects: Iterable[Project], donors: list[dict[Project, Numeric]]
+) -> list[Project]:
+    """
+    Determines the eligible projects based on the Greedy rules
+
+    Parameters
+    ----------
+        projects : Iterable[Project]
+            The list of projects.
+        donors : list[dict[Project, Numeric]]
+            The list of donor ballots.
+
+    Returns
+    -------
+        list[Project]
+            The list of eligible projects.
+    """
+    epsilon = 1e-5
+    support = {
+        project: sum([donor.get(project, 0) for donor in donors])
+        for project in projects
+    }
+    return [
+        project
+        for project in projects
+        if support.get(project, 0) * (1+epsilon) >= project.cost
+    ]
+
+def is_eligible_gs(
+    projects: Iterable[Project], donors: list[dict[Project, Numeric]]
+) -> list[Project]:
+    """
+    Determines the eligible projects based on the Greedy-by-Support (GS) rule.
+
+    Parameters
+    ----------
+        projects : Iterable[Project]
+            The list of projects.
+        donors : list[dict[Project, Numeric]]
+            The list of donor ballots.
+
+    Returns
+    -------
+        list[Project]
+            The list of eligible projects.
+    """
+    return is_eligible_greedy(projects, donors)
+
+def is_eligible_ge(
+    projects: Iterable[Project], donors: list[dict[Project, Numeric]]
+) -> list[Project]:
+    """
+    Determines the eligible projects based on the General Election (GE) rule.
+
+    Parameters
+    ----------
+        projects : Iterable[Project]
+            The list of projects.
+        donors : list[dict[Project, Numeric]]
+            The list of donor ballots.
+
+    Returns
+    -------
+        list[Project]
+            The list of eligible projects.
+    """
+    return is_eligible_greedy(projects, donors)
+
+
+def is_eligible_gsc(
+    projects: Iterable[Project], donors: list[dict[Project, Numeric]]
+) -> list[Project]:
+    """
+    Determines the eligible projects based on the Greatest Support to Cost (GSC) rule.
+
+    Parameters
+    ----------
+        projects : Iterable[Project]
+            The list of projects.
+        donors : list[dict[Project, Numeric]]
+            The list of donor ballots.
+
+    Returns
+    -------
+        list[Project]
+            The list of eligible projects.
+    """
+    return is_eligible_greedy(projects, donors)
+
+def select_project_gs(
+    projects: Iterable[Project],
+    donors: list[dict[Project, Numeric]],
+    find_best: bool = True
+) -> list[Project]:
+    """
+    Selects the project with the maximum support using the Greedy-by-Support (GS) rule.
+
+    Parameters
+    ----------
+        projects : Iterable[Project]
+            The list of projects.
+        donors : list[dict[Project, Numeric]]
+            The list of donor ballots.
+        find_best: bool, optional
+            Set to `True` to select best project, or `False` for worst project
+            defaults to `True`
+            
+    Returns
+    -------
+        list[Project]
+            The tied selected projects.
+    """
+    support = {
+        project: sum([donor.get(project, 0) for donor in donors])
+        for project in projects
+    }
+    if find_best:
+        target_support_value = max(support.values())
+    else:
+        target_support_value = min(support.values())
+    target_support_projects = [
+        project
+        for project, supp in support.items()
+        if supp == target_support_value
+    ]
+    return target_support_projects
+
+def select_project_ge(
+    projects: Iterable[Project],
+    donors: list[dict[Project, Numeric]],
+    find_best: bool = True
+) -> list[Project]:
+    """
+    Selects the project with the maximum excess support using the General Election (GE) rule.
+
+    Parameters
+    ----------
+        projects : Iterable[Project]
+            The list of projects.
+        donors : list[dict[Project, Numeric]]
+            The list of donor ballots.
+        find_best: bool, optional
+            Set to `True` to select best project, or `False` for worst project
+            defaults to `True`
+            
+    Returns
+    -------
+        list[Project]
+            The tied selected projects.
+    """
+    excess_support = {
+        project: sum([donor.get(project, 0) for donor in donors]) - project.cost
+        for project in projects
+    }
+    if find_best:
+        target_excess_value = max(excess_support.values())
+    else:
+        target_excess_value = min(excess_support.values())
+    target_excess_projects = [
+        project
+        for project, excess in excess_support.items()
+        if excess == target_excess_value
+    ]
+    return target_excess_projects
+
+
+def select_project_gsc(
+    projects: Iterable[Project],
+    donors: list[dict[Project, Numeric]],
+    find_best: bool = True
+) -> list[Project]:
+    """
+    Selects the project with the maximum excess support using the General Election (GSC) rule.
+
+    Parameters
+    ----------
+        projects : Instance
+            The list of projects.
+        donors : list[dict[Project, Numeric]]
+            The list of donor ballots.
+        find_best: bool, optional
+            Set to `True` to select best project, or `False` for worst project
+            defaults to `True`
+
+    Returns
+    -------
+        list[Project]
+            The tied selected projects.
+    """
+    support_over_cost = {
+        project: frac(sum([donor.get(project, 0) for donor in donors]), project.cost)
+        for project in projects
+    }
+    if find_best:
+        target_SOC_value = max(support_over_cost.values())
+    else:
+        target_SOC_value = min(support_over_cost.values())
+    target_SOC_projects = [
+        project
+        for project, SOC in support_over_cost.items()
+        if SOC == target_SOC_value
+    ]
+    return target_SOC_projects
+
+
+def elimination_with_transfers(
+    projects: set[Project],
+    donors: list[dict[Project, Numeric]],
+    eliminated_projects: list[Project],
+    project_to_fund_selection_procedure: Callable,
+    tie_breaking: TieBreakingRule,
+) -> bool:
+    """
+    Eliminates the project with the least excess support and redistributes its support to the
+    remaining projects.
+
+    Parameters
+    ----------
+        projects : list[Project]
+            The list of projects.
+        donors : list[dict[Project, Numeric]]
+            The list of donor ballots.
+        eliminated_projects : set[Project]
+            The set of eliminated projects
+        project_to_fund_selection_procedure : callable
+            The procedure to select a project for funding, not used in this function.
+        tie_breaking : TieBreakingRule, optional
+            The tie-breaking rule to use, defaults to lexico_tie_breaking.
+
+    Returns
+    -------
+        bool
+            True if the elimination with transfers was successful, False otherwise.
+    """
+
+    def distribute_project_support(
+        all_donors: list[dict[Project, Numeric]],
+        eliminated_project: Project,
+    ) -> None:
+        """
+        Distributes the support of an eliminated project to the remaining projects.
+        """
+        for donor in all_donors:
+            to_distribute = donor[eliminated_project]
+            donor.pop(eliminated_project)
+            total = sum(donor.values())
+            if total == 0:
+                continue
+            for key, donation in donor.items():
+                part = frac(donation, total)
+                donor[key] = donation + to_distribute * part
+
+    if len(projects) < 2:
+        if len(projects) == 1:
+            eliminated_projects.append(projects.pop())
+        return False
+    min_projects = project_to_fund_selection_procedure(
+        projects, donors, False
+    )
+    if len(min_projects) > 1:
+        min_project = tie_breaking.untie(
+            projects, 
+            CumulativeProfile([CumulativeBallot(donor) for donor in donors]), 
+            min_projects
+        )
+    else:
+        min_project = min_projects[0]
+    distribute_project_support(donors, min_project)
+    projects.remove(min_project)
+    eliminated_projects.append(min_project)
+    return True
+
+
+def minimal_transfer(
+    projects: set[Project],
+    donors: list[dict[Project, Numeric]],
+    eliminated_projects: list[Project],
+    project_to_fund_selection_procedure: Callable,
+    tie_breaking: TieBreakingRule = lexico_tie_breaking,
+) -> bool:
+    """
+    Performs minimal transfer of donations to reach the required support for a selected project.
+
+    Parameters
+    ----------
+        projects : Iterable[Project]
+            The list of projects.
+        donors : list[dict[Project, Numeric]]
+            The list of donor ballots.
+        eliminated_projects : set[Project]
+            The list of eliminated projects.
+        project_to_fund_selection_procedure : callable
+            The procedure to select a project for funding.
+        tie_breaking : TieBreakingRule, optional
+            The tie-breaking rule to use, defaults to lexico_tie_breaking.
+
+    Returns
+    -------
+        bool
+            True if the minimal transfer was successful, False if the project was added to
+            eliminated_projects.
+
+    """
+    for project in projects.copy():
+        donors_of_selected_project = [
+            donor.values()
+            for _, donor in enumerate(donors)
+            if donor.get(project, 0) > 0
+        ]
+        sum_of_don = 0
+        for d in donors_of_selected_project:
+            sum_of_don += sum(d)
+        if sum_of_don < project.cost:
+            eliminated_projects.append(project)
+            projects.remove(project)
+    if not projects:
+        return False
+    tied_projects = project_to_fund_selection_procedure(projects, donors)
+    if len(tied_projects) > 1:
+        chosen_project = tie_breaking.untie(
+            projects, 
+            CumulativeProfile([CumulativeBallot(donor) for donor in donors]), 
+            tied_projects
+        )
+    else:
+        chosen_project = tied_projects[0]
+    donors_of_selected_project = [
+        i for i, donor in enumerate(donors) if donor.get(chosen_project.name, 0) > 0
+    ]
+    project_cost = chosen_project.cost
+
+    # Calculate initial support ratio
+    total_support = sum(donors[i].get(chosen_project, 0) for i in donors_of_selected_project)
+    r = frac(total_support, project_cost)
+
+    # Loop until all donors can afford ratio
+    num_loop_run = 0
+    do_continue = True
+    while do_continue:
+        do_continue = False
+        
+        for i in list(donors_of_selected_project):
+            donor = donors[i]
+            donation = donor.get(chosen_project, 0)
+            total = sum(donor.values())
+            if frac(donation, r) > total:
+                do_continue = True
+                for proj_name, proj_donation in donor.items():
+                    donor[proj_name] = 0
+                donor[chosen_project] = total
+                donors_of_selected_project.remove(i)
+                total_support -= total
+                project_cost -= total
+                r = frac(total_support, project_cost)
+    # Loop until the required support is achieved
+    if donors_of_selected_project:
+        num_loop_run = 0
+        while r < 1:
+            num_loop_run += 1
+            # Check if all donors have their entire donation on the chosen project
+            all_on_chosen_project = all(
+                sum(donors[i].values()) == donors[i].get(chosen_project, 0)
+                for i in donors_of_selected_project
+            )
+            if all_on_chosen_project:
+                for project in projects:
+                    eliminated_projects.append(project)
+                return False
+
+            for i in donors_of_selected_project:
+                donor = donors[i]
+                donation = donor.get(chosen_project, 0)
+                total = sum(donor.values()) - donation
+                if total > 0:
+                    to_distribute = min(total, frac(donation, r) - donation)
+                    for proj_name, proj_donation in donor.items():
+                        if proj_name != chosen_project and proj_donation > 0:
+                            change = frac(to_distribute * proj_donation, total)
+                            if to_distribute - change < 1e-14:
+                                change = to_distribute
+                            donor[proj_name] -= change
+                            donor[chosen_project] += frac(math.ceil(change * 100000000000000), 100000000000000)
+
+            # Recalculate the support ratio
+            total_support = sum(donors[i].get(chosen_project, 0) for i in donors_of_selected_project)
+            r = frac(total_support, project_cost)
+
+            if num_loop_run > 10000:
+                #raise RuntimeError("The while loop of the minimal_transfer function ran for too long. This can be due to"
+                #                " issues with floating point arithmetic.")
+                break
+
+    diff = project_cost - sum(donor.get(chosen_project.name, 0) for donor in donors)
+    if diff > 0:
+        mn_supp = project_cost
+        mn_i = 0
+        for idx, donor in enumerate(donors):
+            supp = donor.get(chosen_project.name, 0)
+            if supp > 0 and mn_supp > supp:
+                mn_supp = supp
+                mn_i = idx
+        donors[mn_i][chosen_project.name] += diff
+
+    return True
+
+
+def reverse_eliminations(
+    selected_projects: BudgetAllocation,
+    donors: list[dict[Project, Numeric]],
+    eliminated_projects: list[Project],
+    project_to_fund_selection_procedure: Callable,
+    budget: Numeric,
+    tie_breaking: TieBreakingRule = lexico_tie_breaking,
+) -> None:
+    """
+    Reverses elimination of projects if the budget allows.
+
+    Parameters
+    ----------
+        selected_projects : BudgetAllocation
+            The list of selected projects.
+        donors : list[dict[Project, Numeric]]
+            The list of donor ballots, not used in this function.
+        eliminated_projects : Instance
+            The list of eliminated projects.
+        project_to_fund_selection_procedure : callable
+            The procedure to select a project for funding, not used in this function.
+        budget : Numeric
+            The remaining budget.
+        tie_breaking : TieBreakingRule, optional
+            The tie-breaking rule to use, defaults to lexico_tie_breaking.
+
+    Returns
+    -------
+        None
+    """
+    for project in reversed(eliminated_projects):
+        if project.cost <= budget:
+            selected_projects.append(project)
+            budget -= project.cost
+
+
+def acceptance_of_under_supported_projects(
+    selected_projects: BudgetAllocation,
+    donors: list[dict[Project, Numeric]],
+    eliminated_projects: Instance,
+    project_to_fund_selection_procedure: Callable,
+    budget: Numeric,
+    tie_breaking: TieBreakingRule = lexico_tie_breaking,
+) -> None:
+    """
+    Accepts under-supported projects if the budget allows.
+
+    Parameters
+    ----------
+        selected_projects : BudgetAllocation
+            The list of selected projects.
+        donors : list[dict[Project, Numeric]]
+            The list of donor ballots.
+        eliminated_projects : Instance
+            The list of eliminated projects.
+        project_to_fund_selection_procedure : callable
+            The procedure to select a project for funding.
+        budget : Numeric
+            The remaining budget.
+        tie_breaking : TieBreakingRule, optional
+            The tie-breaking rule to use, defaults to lexico_tie_breaking.
+
+    Returns
+    -------
+        None
+    """
+    while len(eliminated_projects) > 0:
+        selected_project = tie_breaking.untie(
+            eliminated_projects,
+            CumulativeProfile([CumulativeBallot(donor) for donor in donors]),
+            project_to_fund_selection_procedure(
+            eliminated_projects, donors
+        ))
+        if selected_project.cost <= budget:
+            selected_projects.append(selected_project)
+            budget -= selected_project.cost
+            for donor in donors:
+                if donor.get(selected_project, 0) > 0:
+                    for project in donor.keys():
+                        donor[project] = 0
+        eliminated_projects.remove(selected_project)
