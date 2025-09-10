@@ -366,14 +366,14 @@ def excess_redistribution_procedure(
         if total == 0:
             project_support -= contribution
             cost -= contribution
-    if cost > 0:
+    if cost > 0 and project_support > 0:
         gama = frac(cost, project_support)
-        for donor in donors: 
-            contribution =   donor[selected_project]
+        for donor in donors:  
             donor.pop(selected_project)
-            to_distribute = contribution * (1 - gama)
             total = sum(donor.values())
             if total != 0:
+                contribution = donor[selected_project]
+                to_distribute = contribution * (1 - gama)
                 for key, donation in donor.items():
                     part = frac(donation, total)
                     donor[key] = donation + to_distribute * part
