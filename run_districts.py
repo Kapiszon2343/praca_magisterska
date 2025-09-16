@@ -3,13 +3,13 @@ import os
 
 election_names = [
     #'poland_katowice_2023_',
-    'poland_czestochowa_2020_',
+    #'poland_czestochowa_2020_',
     #'poland_czestochowa_2024_',
     'poland_lodz_2020_',
-    'poland_lodz_2022_',
+    #'poland_lodz_2022_',
     #'poland_lodz_2023_',
     #'poland_warszawa_2024_',
-    'poland_gdynia_2020_',
+    #'poland_gdynia_2020_',
 
 ]
 
@@ -19,9 +19,9 @@ def cstv_short(combination):
     return tmp
 
 rules = [
-    ('GE', greedy_e),
-    ('GSC', greedy_sc),
-    ('GS', greedy_s),
+    #('GE', greedy_e),
+    #('GSC', greedy_sc),
+    #('GS', greedy_s),
     ('EWT', cstv_short(CSTV_Combination.EWT)),
     ('EWTC', cstv_short(CSTV_Combination.EWTC)),
     ('EWTS', cstv_short(CSTV_Combination.EWTS)),
