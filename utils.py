@@ -8,13 +8,23 @@ from cstv2 import *
 encoding="utf-8-sig"
 
 all_election_names = [
-    'poland_katowice_2023_',
-    'poland_czestochowa_2024_',
-    'poland_warszawa_2024_',
-    'poland_lodz_2023_',
     'france_toulouse_2019_',
     'poland_czestochowa_2020_',
+    'poland_czestochowa_2024_',
     'poland_gdansk_2020_',
+    'poland_gdynia_2020_',
+    'poland_katowice_2022_',
+    'poland_katowice_2023_',
+    'poland_warszawa_2024_',
+    'poland_lodz_2020_',
+    'poland_lodz_2022_',
+    'poland_lodz_2023_',
+    'poland_swiecie_2023_',
+    'poland_warszawa_2023_',
+    'poland_warszawa_2024_',
+    'poland_wroclaw_2016_',
+    'poland_wroclaw_2017_',
+    'poland_wroclaw_2018_',
     'switzerland_zurich_d5_',
     'switzerland_zurich_d10_',
     'switzerland_zurich_s5d10_',
@@ -35,7 +45,7 @@ def balance_profile(instance,
                     profile,
                     adjust_cumulative_to_costs = False, 
                     adjust_cardinal_to_costs = False, 
-                    adjust_approval_to_costs = True
+                    adjust_approval_to_costs = False
                     ):
 
     budget_per_ballot = instance.budget_limit / len(profile)
@@ -92,7 +102,7 @@ def read_path(path):
 def read_pb(path, 
             adjust_cumulative_to_costs = False, 
             adjust_cardinal_to_costs = False, 
-            adjust_approval_to_costs = True
+            adjust_approval_to_costs = False
             ):
     (instance, profile) = read_path(path)
 

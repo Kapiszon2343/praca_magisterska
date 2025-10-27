@@ -98,7 +98,6 @@ for measure_id in [0, 1, 2, 3, 4, 5]:
                                 total_u += sm
                             elections.append(Election(election, instance.budget_limit))
                         ejr_val = ejr_plus_violations(elections, alloc2)
-                        # measure[i].append(len(ejr_val) / len(instance))
                         # print(f'{election_name} + {alloc_name} EJR: {ejr_val}')
                         ejr_sum = 0
                         for project in ejr_val:
