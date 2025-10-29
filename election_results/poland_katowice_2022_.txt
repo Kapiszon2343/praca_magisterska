@@ -1,11 +1,20 @@
 {
-"GE": ["M/32/IX", "M/23/IX", "M/41/IX", "M/10/IX", "M/42/IX", "M/46/IX", "M/08/IX", "M/44/IX", "M/15/IX", "M/38/IX", "M/31/IX", "M/36/IX", "M/40/IX", "M/06/IX", "M/47/IX", "M/26/IX", "M/14/IX", "M/25/IX", "M/01/IX", "M/19/IX", "M/11/IX"],
-"GSC": ["M/32/IX", "M/23/IX", "M/41/IX", "M/10/IX", "M/42/IX", "M/46/IX", "M/08/IX", "M/44/IX", "M/15/IX", "M/38/IX", "M/36/IX", "M/40/IX", "M/06/IX", "M/47/IX", "M/26/IX", "M/14/IX", "M/12/IX", "M/25/IX", "M/01/IX", "M/11/IX"],
+"GE score": ["M/44/IX", "M/38/IX", "M/42/IX", "M/47/IX", "M/26/IX", "M/08/IX", "M/15/IX", "M/40/IX", "M/14/IX", "M/19/IX", "M/46/IX", "M/36/IX", "M/01/IX", "M/11/IX", "M/25/IX", "M/31/IX", "M/41/IX", "M/23/IX", "M/10/IX", "M/32/IX", "M/06/IX"],
+"GSC score": ["M/44/IX", "M/38/IX", "M/42/IX", "M/47/IX", "M/26/IX", "M/08/IX", "M/15/IX", "M/12/IX", "M/40/IX", "M/14/IX", "M/46/IX", "M/36/IX", "M/01/IX", "M/11/IX", "M/25/IX", "M/41/IX", "M/23/IX", "M/10/IX", "M/32/IX", "M/06/IX"],
+"GS score": ["M/18/IX", "M/16/IX"],
+"EWT score": ["M/46/IX", "M/23/IX", "M/38/IX", "M/06/IX", "M/40/IX", "M/25/IX", "M/11/IX", "M/26/IX", "M/08/IX", "M/15/IX", "M/32/IX", "M/44/IX", "M/47/IX", "M/14/IX", "M/42/IX", "M/10/IX", "M/01/IX", "M/31/IX", "M/36/IX", "M/41/IX", "M/19/IX"],
+"EWTC score": ["M/46/IX", "M/23/IX", "M/38/IX", "M/40/IX", "M/06/IX", "M/25/IX", "M/26/IX", "M/11/IX", "M/08/IX", "M/32/IX", "M/15/IX", "M/44/IX", "M/47/IX", "M/14/IX", "M/42/IX", "M/01/IX", "M/12/IX", "M/36/IX", "M/10/IX", "M/41/IX"],
+"EWTS score": ["M/46/IX", "M/06/IX", "M/23/IX", "M/38/IX", "M/40/IX", "M/11/IX", "M/08/IX", "M/26/IX", "M/25/IX", "M/16/IX", "M/36/IX", "M/42/IX", "M/32/IX"],
+"MT score": ["M/46/IX", "M/23/IX", "M/38/IX", "M/06/IX", "M/40/IX", "M/25/IX", "M/11/IX", "M/26/IX", "M/08/IX", "M/32/IX", "M/15/IX", "M/44/IX", "M/47/IX", "M/14/IX", "M/42/IX", "M/10/IX", "M/01/IX", "M/31/IX", "M/41/IX", "M/36/IX", "M/19/IX"],
+"MTC score": ["M/46/IX", "M/23/IX", "M/38/IX", "M/40/IX", "M/06/IX", "M/25/IX", "M/26/IX", "M/11/IX", "M/08/IX", "M/32/IX", "M/15/IX", "M/44/IX", "M/47/IX", "M/01/IX", "M/42/IX", "M/14/IX", "M/12/IX", "M/36/IX", "M/10/IX", "M/41/IX"],
+"MTS score": ["M/46/IX", "M/06/IX", "M/23/IX", "M/38/IX", "M/40/IX", "M/11/IX", "M/08/IX", "M/26/IX", "M/25/IX", "M/44/IX", "M/15/IX", "M/32/IX", "M/16/IX", "M/42/IX", "M/14/IX", "M/10/IX", "M/47/IX"],
+"GE": ["M/44/IX", "M/38/IX", "M/42/IX", "M/47/IX", "M/26/IX", "M/08/IX", "M/15/IX", "M/40/IX", "M/14/IX", "M/19/IX", "M/46/IX", "M/36/IX", "M/01/IX", "M/11/IX", "M/25/IX", "M/31/IX", "M/41/IX", "M/23/IX", "M/10/IX", "M/32/IX", "M/06/IX"],
+"GSC": ["M/44/IX", "M/38/IX", "M/42/IX", "M/47/IX", "M/26/IX", "M/08/IX", "M/15/IX", "M/12/IX", "M/40/IX", "M/14/IX", "M/46/IX", "M/01/IX", "M/18/IX", "M/11/IX", "M/25/IX", "M/41/IX", "M/23/IX", "M/32/IX", "M/06/IX"],
 "GS": ["M/18/IX", "M/16/IX"],
-"EWT": ["M/46/IX", "M/23/IX", "M/38/IX", "M/06/IX", "M/40/IX", "M/25/IX", "M/11/IX", "M/26/IX", "M/08/IX", "M/15/IX", "M/32/IX", "M/44/IX", "M/47/IX", "M/14/IX", "M/42/IX", "M/10/IX", "M/01/IX", "M/31/IX", "M/36/IX", "M/41/IX", "M/19/IX"],
-"EWTC": ["M/46/IX", "M/23/IX", "M/38/IX", "M/40/IX", "M/06/IX", "M/25/IX", "M/26/IX", "M/11/IX", "M/08/IX", "M/32/IX", "M/15/IX", "M/44/IX", "M/47/IX", "M/14/IX", "M/42/IX", "M/01/IX", "M/12/IX", "M/36/IX", "M/10/IX", "M/41/IX"],
-"EWTS": ["M/46/IX", "M/06/IX", "M/23/IX", "M/38/IX", "M/40/IX", "M/11/IX", "M/08/IX", "M/26/IX", "M/25/IX", "M/16/IX", "M/36/IX", "M/42/IX", "M/32/IX"],
-"MT": ["M/46/IX", "M/23/IX", "M/38/IX", "M/06/IX", "M/40/IX", "M/25/IX", "M/11/IX", "M/26/IX", "M/08/IX", "M/32/IX", "M/15/IX", "M/44/IX", "M/47/IX", "M/14/IX", "M/42/IX", "M/10/IX", "M/01/IX", "M/31/IX", "M/41/IX", "M/36/IX", "M/19/IX"],
-"MTC": ["M/46/IX", "M/23/IX", "M/38/IX", "M/40/IX", "M/06/IX", "M/25/IX", "M/26/IX", "M/11/IX", "M/08/IX", "M/32/IX", "M/15/IX", "M/44/IX", "M/47/IX", "M/01/IX", "M/42/IX", "M/14/IX", "M/12/IX", "M/36/IX", "M/10/IX", "M/41/IX"],
-"MTS": ["M/46/IX", "M/06/IX", "M/23/IX", "M/38/IX", "M/40/IX", "M/11/IX", "M/08/IX", "M/26/IX", "M/25/IX", "M/44/IX", "M/15/IX", "M/32/IX", "M/16/IX", "M/42/IX", "M/14/IX", "M/10/IX", "M/47/IX"]
+"EWT": ["M/23/IX", "M/46/IX", "M/40/IX", "M/38/IX", "M/06/IX", "M/11/IX", "M/25/IX", "M/08/IX", "M/26/IX", "M/15/IX", "M/32/IX", "M/44/IX", "M/47/IX", "M/14/IX", "M/42/IX", "M/10/IX", "M/01/IX", "M/31/IX", "M/36/IX", "M/41/IX", "M/18/IX"],
+"EWTC": ["M/23/IX", "M/46/IX", "M/40/IX", "M/38/IX", "M/06/IX", "M/11/IX", "M/25/IX", "M/26/IX", "M/08/IX", "M/15/IX", "M/32/IX", "M/44/IX", "M/47/IX", "M/14/IX", "M/12/IX", "M/01/IX", "M/42/IX", "M/18/IX", "M/10/IX", "M/31/IX"],
+"EWTS": ["M/46/IX", "M/23/IX", "M/40/IX", "M/38/IX", "M/16/IX", "M/01/IX", "M/44/IX", "M/06/IX", "M/11/IX", "M/42/IX", "M/26/IX"],
+"MT": ["M/23/IX", "M/46/IX", "M/40/IX", "M/38/IX", "M/25/IX", "M/08/IX", "M/26/IX", "M/32/IX", "M/06/IX", "M/11/IX", "M/15/IX", "M/44/IX", "M/47/IX", "M/14/IX", "M/42/IX", "M/10/IX", "M/01/IX", "M/31/IX", "M/41/IX", "M/36/IX", "M/19/IX"],
+"MTC": ["M/23/IX", "M/46/IX", "M/40/IX", "M/38/IX", "M/06/IX", "M/08/IX", "M/11/IX", "M/26/IX", "M/15/IX", "M/32/IX", "M/25/IX", "M/44/IX", "M/01/IX", "M/12/IX", "M/42/IX", "M/47/IX", "M/14/IX", "M/36/IX", "M/10/IX", "M/41/IX"],
+"MTS": ["M/46/IX", "M/23/IX", "M/40/IX", "M/38/IX", "M/44/IX", "M/06/IX", "M/11/IX", "M/15/IX", "M/08/IX", "M/26/IX", "M/32/IX", "M/25/IX", "M/16/IX", "M/42/IX", "M/14/IX", "M/10/IX", "M/47/IX"]
 }
