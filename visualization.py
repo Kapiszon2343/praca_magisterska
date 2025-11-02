@@ -1,95 +1,92 @@
 import pabutools
 import json
-import statistics
 from pabutools.analysis.votersatisfaction import *
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Patch
+import multiprocessing
+import pathlib
 
 from analisis import *
 
-#election_names = all_election_names
-#'''
-election_names = [
-    'france_toulouse_2019_',
-    'poland_czestochowa_2020_',
-    'poland_czestochowa_2024_',
-    'poland_gdansk_2020_',
-    'poland_gdynia_2020_',
-    'poland_katowice_2022_',
-    'poland_katowice_2023_',
-    'poland_katowice_2024_',
-    #'poland_warszawa_2024_',
-    #'poland_lodz_2020_',
-    #'poland_lodz_2022_',
-    #'poland_lodz_2023_',
-    #'poland_swiecie_2023_',
-    #'poland_warszawa_2023_',
-    #'poland_warszawa_2024_',
-    #'poland_wroclaw_2016_',
-    #'poland_wroclaw_2017_',
-    #'poland_wroclaw_2018_',
-    #'switzerland_zurich_d5_',
-    #'switzerland_zurich_d10_',
-    #'switzerland_zurich_s5d10_',
-    #'worldwide_mechanical-turk_utilities-3_',
-    #'worldwide_mechanical-turk_utilities-6_',
-    #'worldwide_mechanical-turk_utilities-7_',
-    #'worldwide_mechanical-turk_utilities-8_',
+def visualize(measure_id):
+    colors = ['gold', 'khaki', 'goldenrod', 'rosybrown', 'salmon', 'indianred', 'palegreen', 'mediumseagreen', 'turquoise']
+    results_names = [
+        'GE', 
+        'GSC', 
+        'GS', 
+        'EWT', 
+        'EWTC', 
+        'EWTS', 
+        'MT', 
+        'MTC', 
+        'MTS'
     ]
-# '''
-colors = ['gold', 'khaki', 'goldenrod', 'rosybrown', 'salmon', 'indianred', 'palegreen', 'mediumseagreen', 'turquoise']
-alloc_names = ['GE', 'GSC', 'GS', 'EWT', 'EWTC', 'EWTS', 'MT', 'MTC', 'MTS']
-election_categories = ['election_results', 'district_results']
-measure_names = ['utility cost score', 'power inequality', 'improvement margin', 'ejr', 'exclusion ratio']
-for measure_id in [0, 1, 2, 3, 4]:
-    labels = []
+    measure_names = ['utility cost score', 'power inequality', 'improvement margin', 'ejr', 'exclusion ratio', 'utility score', 'ejr scaled']
+    group_id = -1
+    labels = ['cumulative small', 'cummulative large', 'approval small', 'approval large']
+    print(f'Starting {measure_names[measure_id]}')
     measure = []
-    for _ in range(len(alloc_names)):
-        measure.append([])
-    fig = plt.subplots(figsize=(12, 8))
-    for fol in election_categories[0:1]:
-        for election_name in election_names:
-            labels.append(election_name.replace('_', ' ').strip())
-            f = open('./' + fol + '/' + election_name + '.txt', 'r', encoding=encoding)
-            data = f.read()
-            allocation = json.loads(data)
-            f.close()
-
-            f = open('./original_elections/' + election_name + '.pb', 'r', encoding=encoding)
+    for _ in range(len(results_names)):
+        emp = [[] for _ in labels]
+        measure.append(emp)
+    for instance_path in pathlib.Path('./instances_all').glob('*.pb'):
+        with instance_path.open(encoding=encoding) as f:
             (instance, profile) = pabutools.election.pabulib.parse_pabulib_from_string(f.read())
-            f.close()
-
-            i = 0
-            allocG = [[], [], []]
-            for alloc_name_tmp in alloc_names:
-                alloc_name = alloc_name_tmp + ' score'
-                alloc2 = []
-                for pr_name in allocation[alloc_name]:
+        instances = [instance]
+        profiles = [profile]
+        match profile[0]:
+            case pabutools.election.ballot.CumulativeBallot():
+                group_id = 0
+            case pabutools.election.ballot.CardinalBallot():
+                group_id = 0
+            case pabutools.election.ballot.ApprovalBallot():
+                group_id = 2
+            case _:
+                group_id = 69
+                continue
+        project_count = 0
+        for instance in instances:
+            project_count += len(instance)
+        if project_count >= 50:
+            group_id += 1
+        i = 0
+        allocG = [[], [], []]
+        for results_name in results_names:
+            results_path = pathlib.Path('.').joinpath('election_results')
+            results_path = results_path.joinpath(results_name)
+            results_path = results_path.joinpath(instance_path.stem + '.json')
+            with results_path.open(encoding=encoding) as f:
+                results_strings = json.load(f)
+            results = []
+            for pr_name in results_strings:
+                for instance in instances:
                     for project in instance:
                         if str(project.name) == str(pr_name):
-                            alloc2.append(project)
-                            break
-                if i < 3:
-                    allocG[i] = allocation[alloc_name]
-                instances = [instance]
-                profiles = [profile]
+                            results.append(project)
+            if i < 3:
+                allocG[i] = results
+            try:
                 match measure_id:
                     case 0:
-                        measure[i].append(avg_utility(instances, profiles, alloc2, use_cost=True))
+                        measure[i][group_id].append(avg_utility(instances, profiles, results, use_cost=True))
                     case 1:
-                        measure[i].append(power_inequality(instances, profiles, alloc2))
+                            meas = power_inequality(instances, profiles, results)
+                            if meas > 200:
+                                print(f'------ Instance {instance_path.name} - {results_name} for {measure_names[measure_id]} has power inequality of {meas}')
+                            else:
+                                measure[i][group_id].append(meas)
                     case 2:
-                        measure[i].append(improvement_margins(instances, profiles, alloc2, allocG[i%3]))
+                        measure[i][group_id].append(improvement_margins(instances, profiles, results, allocG[i%3]))
                     case 3:
                         elections = []
-                        total_u = 0
+                        projects_n = 0
                         for ii in range(len(instances)):
                             instance = instances[ii]
                             profile = profiles[ii]
                             election = dict()
+                            projects_n += len(instance)
                             for h in range(len(profile)):
-                                sm = 0
                                 match profile[h]:
                                     case pabutools.election.ballot.CumulativeBallot():
                                         for p, u in profile[h].items():
@@ -97,48 +94,92 @@ for measure_id in [0, 1, 2, 3, 4]:
                                                 if p not in election:
                                                     election[p] = dict()
                                                 election[p][h] = u * p.cost
-                                                sm += u * p.cost
                                     case pabutools.election.ballot.ApprovalBallot():
                                         for p in profile[h]:
                                             if p not in election:
                                                 election[p] = dict()
                                             election[p][h] = p.cost
-                                            sm += p.cost
-                                total_u += sm
                             elections.append(Election(election, instance.budget_limit))
-                        ejr_val = ejr_plus_violations(elections, alloc2)
-                        print(f'{election_name} + {alloc_name} EJR: {ejr_val}')
-                        ejr_sum = 0
-                        for project in ejr_val:
-                            for election in elections:
-                                if project in election.profile:
-                                    ejr_sum += sum(election.profile[project].values())
-                        #print(f'{election_name} + {alloc_name} EJR: {ejr_sum} / {instance.budget_limit}')
-                        measure[i].append(ejr_sum / total_u)
+                        measure[i][group_id].append(len(ejr_plus_violations(elections, results)))
                     case 4:
-                            measure[i].append(exclusion_ratio(instances, profiles, alloc2))
+                        measure[i][group_id].append(exclusion_ratio(instances, profiles, results))
                     case 5:
-                        measure[i].append(avg_utility(instances, profiles, alloc2, use_cost=False))
-                i += 1
+                        measure[i][group_id].append(avg_utility(instances, profiles, results, use_cost=False))
+                    case 6:
+                        elections = []
+                        projects_n = 0
+                        for ii in range(len(instances)):
+                            instance = instances[ii]
+                            profile = profiles[ii]
+                            election = dict()
+                            projects_n += len(instance)
+                            for h in range(len(profile)):
+                                match profile[h]:
+                                    case pabutools.election.ballot.CumulativeBallot():
+                                        for p, u in profile[h].items():
+                                            if u > 0:
+                                                if p not in election:
+                                                    election[p] = dict()
+                                                election[p][h] = u * p.cost
+                                    case pabutools.election.ballot.ApprovalBallot():
+                                        for p in profile[h]:
+                                            if p not in election:
+                                                election[p] = dict()
+                                            election[p][h] = p.cost
+                            elections.append(Election(election, instance.budget_limit))
+                        measure[i][group_id].append(len(ejr_plus_violations(elections, results)) / projects_n)
+            except Exception as e:
+                print(f'Instance {instance_path.name} - {results_name} for {measure_names[measure_id]}:\n  {e}')
+            i += 1
 
-    br_n = len(alloc_names)
+    br_n = len(results_names)
     barWidth = 1 / (br_n+1)
     br = [np.arange(len(measure[0]))]
     for i in range(br_n-1):
         br.append([x+barWidth for x in br[i]])
 
+    fig = plt.subplots(figsize=(12, 8))
     for i in range(br_n):
-        plt.bar(br[i], measure[i], color=colors[i], width=barWidth,
-                edgecolor='grey', label='avg ut')
+        bp = plt.boxplot(measure[i], widths=barWidth, positions=br[i], patch_artist=True)
+        for patch in bp['boxes']:
+            patch.set_facecolor(colors[i])
 
-    #plt.xlabel('czestochowa 2020')
     plt.ylabel(measure_names[measure_id])
     plt.xticks(br[br_n//2], labels)
 
     artists = [Patch(facecolor=color, edgecolor='grey') for color in colors]
-    plt.legend(artists, alloc_names)
-    plt.savefig(f'plots/{measure_names[measure_id]}.png')
+    plt.legend(artists, results_names)
+    plt.savefig(f'plots_box/{measure_names[measure_id]}.png')
 
-    with open(f'plots/{measure_names[measure_id]}.txt', "w") as f:
-        for idx, res in enumerate(measure):
-            f.write(f":{alloc_names[idx]} {res}\n")
+    fig = plt.subplots(figsize=(12, 8))
+    for i in range(br_n):
+        vp = plt.violinplot(measure[i], positions=br[i], widths=barWidth, showmeans=False, showmedians=True)
+        for body in vp['bodies']:
+            body.set_facecolor(colors[i])
+            body.set_edgecolor('black')
+            body.set_alpha(0.8)
+    plt.ylabel(measure_names[measure_id])
+    plt.xticks(br[br_n//2], labels)
+
+    artists = [Patch(facecolor=color, edgecolor='grey') for color in colors]
+    plt.legend(artists, results_names)
+    plt.savefig(f'plots_violin/{measure_names[measure_id]}.png')
+
+    with open(f'plots_box/{measure_names[measure_id]}.txt', "w") as f:
+        for result_id, results in enumerate(measure):
+            for group_id, res in enumerate(results):
+                if len(res) > 0: 
+                    f.write(f":{results_names[result_id]} - {labels[group_id]}:\n  mean: {sum(res)/len(res)}\n  min: {min(res)}\n  max: {max(res)}\n")
+                else:
+                    f.write(f":{results_names[result_id]} - {labels[group_id]}:\n  no results\n")
+
+if __name__ == '__main__':
+    processes = []
+    measure_ids = [0, 1, 2, 3, 4, 5, 6]
+    for measure_id in measure_ids:
+        p = multiprocessing.Process(target=visualize, args=(measure_id,)) 
+        p.start()
+        processes.append(p)
+
+    for p in processes:
+        p.join()

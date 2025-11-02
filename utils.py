@@ -1,13 +1,12 @@
 import pabutools.fractions
 import pabutools
+from pabutools.rules.cstv import *
 
 pabutools.fractions.FRACTION = "float"
 
-from cstv2 import *
-
 encoding="utf-8-sig"
 
-all_election_names = [
+sample_election_names = [
     'france_toulouse_2019_',
     'poland_czestochowa_2020_',
     'poland_czestochowa_2024_',
@@ -34,11 +33,11 @@ all_election_names = [
     'worldwide_mechanical-turk_utilities-8_',
 ]
 
-good_election_names = [
+minimal_sample_election_names = [
     'poland_katowice_2023_',
     'poland_czestochowa_2024_',
+    'poland_swiecie_2023_',
     'poland_warszawa_2024_',
-    'poland_lodz_2023_',
 ]
 
 def balance_profile(instance, 
@@ -83,6 +82,8 @@ def balance_profile(instance,
                     val = budget_per_ballot / len(ballot)
                     for project in ballot:
                         b[project] = val
+            case _:
+                raise TypeError
 
                 
         b = pabutools.election.ballot.CumulativeBallot(b)
@@ -121,7 +122,7 @@ def greedy_s(instance, profile):
         {p: ballot[p] * profile.multiplicity(ballot) for p in instance}
         for ballot in profile
     ]
-    budget = sum(sum(donor.values()) for donor in donations)
+    budget = instance.budget_limit
     while len(remaining_projects) > 0:
         tied_projects = select_project_gs(remaining_projects, donations)
         if not tied_projects:
@@ -142,7 +143,7 @@ def greedy_sc(instance, profile):
         {p: ballot[p] * profile.multiplicity(ballot) for p in instance}
         for ballot in profile
     ]
-    budget = sum(sum(donor.values()) for donor in donations)
+    budget = instance.budget_limit
     while len(remaining_projects) > 0:
         tied_projects = select_project_gsc(remaining_projects, donations)
         if not tied_projects:
@@ -163,7 +164,7 @@ def greedy_e(instance, profile):
         {p: ballot[p] * profile.multiplicity(ballot) for p in instance}
         for ballot in profile
     ]
-    budget = sum(sum(donor.values()) for donor in donations)
+    budget = instance.budget_limit
     while len(remaining_projects) > 0:
         tied_projects = select_project_ge(remaining_projects, donations)
         if not tied_projects:
@@ -176,3 +177,29 @@ def greedy_e(instance, profile):
             budget -= project.cost
         remaining_projects.remove(project)
     return selected_projects
+
+def __cstv_short(combination):
+    def tmp(instance, profile):
+        return cstv(instance=instance, profile=profile, combination=combination, verbose=False)
+    return tmp
+
+rules = [
+        ('GE score', False, greedy_e),
+        ('GSC score', False, greedy_sc),
+        ('GS score', False, greedy_s),
+        ('EWT score', False, __cstv_short(CSTV_Combination.EWT)),
+        ('EWTC score', False, __cstv_short(CSTV_Combination.EWTC)),
+        ('EWTS score', False, __cstv_short(CSTV_Combination.EWTS)),
+        ('MT score', False, __cstv_short(CSTV_Combination.MT)),
+        ('MTC score', False, __cstv_short(CSTV_Combination.MTC)),
+        ('MTS score', False, __cstv_short(CSTV_Combination.MTS)),
+        ('GE', True, greedy_e),
+        ('GSC', True, greedy_sc),
+        ('GS', True, greedy_s),
+        ('EWT', True, __cstv_short(CSTV_Combination.EWT)),
+        ('EWTC', True, __cstv_short(CSTV_Combination.EWTC)),
+        ('EWTS', True, __cstv_short(CSTV_Combination.EWTS)),
+        ('MT', True, __cstv_short(CSTV_Combination.MT)),
+        ('MTC', True, __cstv_short(CSTV_Combination.MTC)),
+        ('MTS', True, __cstv_short(CSTV_Combination.MTS)),
+    ]

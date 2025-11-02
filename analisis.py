@@ -6,6 +6,8 @@ from matplotlib.patches import Patch
 
 from utils import *
 
+import json
+
 def project_ballot_support(ballot, project, use_cost = False):
     if use_cost:
         match ballot:
@@ -18,6 +20,8 @@ def project_ballot_support(ballot, project, use_cost = False):
                     return project.cost
                 else:
                     return 0
+            case _:
+                raise TypeError('type ' + type(ballot).__name__ + ' is incorrect')
     else:
         match ballot:
             case pabutools.election.ballot.CumulativeBallot():
@@ -29,29 +33,29 @@ def project_ballot_support(ballot, project, use_cost = False):
                     return 1
                 else:
                     return 0
+            case _:
+                raise TypeError('type ' + type(ballot).__name__ + ' is incorrect')
 
 def single_utility(ballot, instance, use_cost = True):
-    utility = 0
-    for project in instance:
-        utility += project_ballot_support(ballot, project, use_cost)
-    return utility
+    return sum([project_ballot_support(ballot, project, use_cost) for project in instance])
 
 def avg_utility(instances, profiles, alloc, use_cost = True):
-    avg_u = 0
+    sum_u = 0
     max_u = 0
     for ii in range(len(instances)):
         instance = instances[ii]
         profile = profiles[ii]
-        single_avg_u = 0
+        trimmed_alloc = [p for p in instance if p in alloc]
+        single_u = 0
         single_max_u = 0
-        for ballot in profile:        
-            single_avg_u += single_utility(ballot, alloc, use_cost)
+        for ballot in profile:
+            single_u += single_utility(ballot, trimmed_alloc, use_cost)
             single_max_u += single_utility(ballot, instance, use_cost)
-        avg_u += single_avg_u
+        sum_u += single_u
         max_u += single_max_u
-    return avg_u / max_u
+    return sum_u / max_u
 
-def dominance_margin(instance, profile, alloc1, alloc2, use_cost = False):
+def dominance_margin(instance, profile, alloc1, alloc2, use_cost = True):
     margin1 = 0
     margin2 = 0
     for ballot in profile:
@@ -63,7 +67,7 @@ def dominance_margin(instance, profile, alloc1, alloc2, use_cost = False):
             margin2 += 1
     return (margin1 / len(profile), margin2 / len(profile))
 
-def improvement_margins(instances, profiles, alloc1, alloc2, use_cost = False):
+def improvement_margins(instances, profiles, alloc1, alloc2, use_cost = True):
     sum1 = 0
     sum2 = 0
     voters_count = 0
@@ -111,29 +115,29 @@ def exclusion_ratio(instances, profiles, alloc):
     return exclusion / voter_count
 
 def power_inequality(instances, profiles, alloc):
-    sm = 0.
-    voter_count = 0
-    for ii in range(len(instances)):
-        instance = instances[ii]
-        profile = profiles[ii]
-        voter_count += len(profile)
-        n = len(profile)
-        b = instance.budget_limit
+    shares = []
+    for idx, profile in enumerate(profiles):
         arr = []
         for project in alloc:
-            pr_sum = 0
+            pr_sum = 0.0
             for ballot in profile:
-                pr_sum += project_ballot_support(project=project, ballot=ballot)
-            arr.append((project, pr_sum))
+                pr_sum += project_ballot_support(project=project, ballot=ballot, use_cost=False)
+            if pr_sum > 0:    
+                arr.append((project, pr_sum))
         for ballot in profile:
-            share = 0
+            share = 0.0
             for (project, pr_sum) in arr:
                 if pr_sum > 0:
                     share += \
-                        project_ballot_support(project=project, ballot=ballot) \
-                        / pr_sum * project.cost
-            sm += abs(share - b/n) * n/b
-    return sm / voter_count
+                        float(project_ballot_support(project=project, ballot=ballot, use_cost=True)) \
+                        / pr_sum
+            shares.append(share)
+
+    m = sum(shares) / len(shares)
+    ineq = 0.0
+    for share in shares:
+        ineq += (share/m - 1.0)**2
+    return ineq / len(shares)
 
 class Election:
     def __init__(self, profile, budget):
@@ -172,4 +176,47 @@ def ejr_plus_violations(elections, outcome, up_to_one = True):
                     if not ejr_satisfied:
                         failures.append(not_elected.name)
                         break
+    return failures
+
+def ejr_plus_violations_test(elections, outcome, up_to_one = True):
+    print(f'\n\n\nelections len: {len(elections)}')
+    print(f'election name {elections[0][0].name}')
+    print(f'election budget {elections[0][0].budget}')
+    with open('tmp.json', 'w') as ff:
+        ar = []
+        for k, v in elections[0][0].profile.items():
+            ar.append((str(k), v))
+        ar.sort()
+        json.dump(ar, ff, indent=2)
+    utility = {}
+    budget_limit = sum([e.budget for e, _, _ in elections])
+    for e, _, _ in elections:
+        for p in e.profile.keys():
+            for v in e.profile[p].keys():
+                utility[v] = 0
+
+    for p in outcome:
+        for e, _, _ in elections:
+            if p in e.profile.keys():
+                for v in e.profile[p].keys():
+                    utility[v] += e.profile[p][v]
+
+    sorted_voters = sorted(utility.items(), key=lambda item : item[1])
+    failures = []
+    for e, _, _ in elections:
+        for not_elected in e.profile.keys():
+            if not_elected in outcome:
+                continue
+            coalition_size = 0
+            for vot, sat in sorted_voters:
+                if vot in e.profile[not_elected].keys():
+                    coalition_size += 1
+                    if up_to_one:
+                        ejr_satisfied = sat >= (coalition_size / len(sorted_voters)) * budget_limit - not_elected.cost
+                    else:
+                        ejr_satisfied = sat >= (coalition_size / len(sorted_voters)) * budget_limit
+                    if not ejr_satisfied:
+                        failures.append(not_elected.name)
+                        break
+    print('EJR failures: ', failures)
     return failures
