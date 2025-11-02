@@ -1,0 +1,144 @@
+:GE - cumulative small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GE - cummulative large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GE - approval small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GE - approval large:
+  mean: 0.0015156709196958418
+  min: 0.0
+  max: 0.02830188679245283
+:GSC - cumulative small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GSC - cummulative large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GSC - approval small:
+  mean: 0.002456965388894047
+  min: 0.0
+  max: 0.2
+:GSC - approval large:
+  mean: 0.00464597220219279
+  min: 0.0
+  max: 0.08125
+:GS - cumulative small:
+  mean: 0.07835175429850107
+  min: 0.0
+  max: 0.5
+:GS - cummulative large:
+  mean: 0.051457816377171214
+  min: 0.0
+  max: 0.09615384615384616
+:GS - approval small:
+  mean: 0.08587247520552183
+  min: 0.0
+  max: 0.8666666666666667
+:GS - approval large:
+  mean: 0.17284314005441162
+  min: 0.0
+  max: 0.6788321167883211
+:EWT - cumulative small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:EWT - cummulative large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:EWT - approval small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:EWT - approval large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:EWTC - cumulative small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:EWTC - cummulative large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:EWTC - approval small:
+  mean: 0.0001799572688041497
+  min: 0.0
+  max: 0.1111111111111111
+:EWTC - approval large:
+  mean: 0.0010819186880715419
+  min: 0.0
+  max: 0.027777777777777776
+:EWTS - cumulative small:
+  mean: 0.018671665610673523
+  min: 0.0
+  max: 0.4
+:EWTS - cummulative large:
+  mean: 0.010184036393713814
+  min: 0.0
+  max: 0.021505376344086023
+:EWTS - approval small:
+  mean: 0.02574021662065952
+  min: 0.0
+  max: 0.5
+:EWTS - approval large:
+  mean: 0.08034714427351844
+  min: 0.0
+  max: 0.3269230769230769
+:MT - cumulative small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:MT - cummulative large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:MT - approval small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:MT - approval large:
+  mean: 0.0016568631095628577
+  min: 0.0
+  max: 0.03389830508474576
+:MTC - cumulative small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:MTC - cummulative large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:MTC - approval small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:MTC - approval large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:MTS - cumulative small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:MTS - cummulative large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:MTS - approval small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:MTS - approval large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0

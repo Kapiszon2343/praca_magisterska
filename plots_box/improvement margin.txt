@@ -1,0 +1,144 @@
+:GE - cumulative small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GE - cummulative large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GE - approval small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GE - approval large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GSC - cumulative small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GSC - cummulative large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GSC - approval small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GSC - approval large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GS - cumulative small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GS - cummulative large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GS - approval small:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:GS - approval large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:EWT - cumulative small:
+  mean: 0.01288592770677837
+  min: -0.012690355329949238
+  max: 0.6351351351351351
+:EWT - cummulative large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:EWT - approval small:
+  mean: 0.053876715233790444
+  min: -0.3333333333333333
+  max: 0.9090909090909091
+:EWT - approval large:
+  mean: 0.286818527787948
+  min: -0.008199210446401458
+  max: 0.6513761467889908
+:EWTC - cumulative small:
+  mean: -0.005404379188835243
+  min: -0.6139534883720931
+  max: 0.16111111111111112
+:EWTC - cummulative large:
+  mean: 0.002256908026566778
+  min: -0.013066871637202153
+  max: 0.025385793379667804
+:EWTC - approval small:
+  mean: -0.016447154296568928
+  min: -0.983739837398374
+  max: 0.9090909090909091
+:EWTC - approval large:
+  mean: 0.1071479764439971
+  min: -0.08304498269896193
+  max: 0.5518563357546409
+:EWTS - cumulative small:
+  mean: 0.0405331395167117
+  min: -0.5337423312883436
+  max: 0.5499021526418787
+:EWTS - cummulative large:
+  mean: 0.05359616542590763
+  min: -0.023645320197044337
+  max: 0.17516786429496997
+:EWTS - approval small:
+  mean: 0.050618250067038115
+  min: -0.9468599033816425
+  max: 0.8181818181818182
+:EWTS - approval large:
+  mean: 0.21207473481283154
+  min: -0.20590030518819938
+  max: 0.588983606557377
+:MT - cumulative small:
+  mean: -0.004889261335476025
+  min: -0.29445234708392604
+  max: 0.0
+:MT - cummulative large:
+  mean: 0.0
+  min: 0.0
+  max: 0.0
+:MT - approval small:
+  mean: -0.018731424448580704
+  min: -0.6462585034013606
+  max: 0.9090909090909091
+:MT - approval large:
+  mean: -0.06942837311782829
+  min: -0.6744583808437856
+  max: 0.2915167865707434
+:MTC - cumulative small:
+  mean: -0.015135045111080126
+  min: -0.825426944971537
+  max: 0.16111111111111112
+:MTC - cummulative large:
+  mean: -0.0041377076216279896
+  min: -0.016550830486511958
+  max: 0.0
+:MTC - approval small:
+  mean: -0.04900483125132263
+  min: -0.983739837398374
+  max: 0.9090909090909091
+:MTC - approval large:
+  mean: -0.09988736512350137
+  min: -0.3819596886848932
+  max: 0.33491441534336974
+:MTS - cumulative small:
+  mean: 0.025833984220152224
+  min: -0.825426944971537
+  max: 0.5499021526418787
+:MTS - cummulative large:
+  mean: 0.08179620897210355
+  min: 0.0022167487684729066
+  max: 0.20184945223230064
+:MTS - approval small:
+  mean: 0.023855322237798914
+  min: -0.983739837398374
+  max: 0.8181818181818182
+:MTS - approval large:
+  mean: 0.17180590349778838
+  min: -0.17663366336633662
+  max: 0.631036217303823
