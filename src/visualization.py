@@ -1,16 +1,38 @@
-import pabutools
 import json
-from pabutools.analysis.votersatisfaction import *
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib.patches import Patch
 import multiprocessing
 import pathlib
 
-from analisis import *
+import matplotlib.pyplot as plt
+import numpy as np
+import pabutools
+from matplotlib.patches import Patch
+
+from analisis import avg_utility, power_inequality, improvement_margins, Election, ejr_plus_violations, exclusion_ratio
+from utils import ENCODING
+
 
 def visualize(measure_id):
-    colors = ['gold', 'khaki', 'goldenrod', 'rosybrown', 'salmon', 'indianred', 'palegreen', 'mediumseagreen', 'turquoise']
+    """
+        Calculate metric using all results in ./election_results and save it as a graph
+        
+        Args:
+            measure_id (id): which metric should be calculated
+            
+        Returns:
+            None
+    """
+
+    colors = [
+        'gold', 
+        'khaki', 
+        'goldenrod', 
+        'rosybrown', 
+        'salmon', 
+        'indianred', 
+        'palegreen', 
+        'mediumseagreen', 
+        'turquoise'
+    ]
     results_names = [
         'GE', 
         'GSC', 
@@ -22,16 +44,29 @@ def visualize(measure_id):
         'MTC', 
         'MTS'
     ]
-    measure_names = ['utility cost score', 'power inequality', 'improvement margin', 'ejr', 'exclusion ratio', 'utility score', 'ejr scaled']
+    measure_names = [
+        'utility cost score', 
+        'power inequality', 
+        'improvement margin', 
+        'ejr', 
+        'exclusion ratio', 
+        'utility score', 
+        'ejr scaled'
+    ]
     group_id = -1
-    labels = ['cumulative small', 'cummulative large', 'approval small', 'approval large']
+    labels = [
+        'cumulative small', 
+        'cummulative large', 
+        'approval small', 
+        'approval large'
+    ]
     print(f'Starting {measure_names[measure_id]}')
     measure = []
     for _ in range(len(results_names)):
         emp = [[] for _ in labels]
         measure.append(emp)
-    for instance_path in pathlib.Path('./instances_all').glob('*.pb'):
-        with instance_path.open(encoding=encoding) as f:
+    for instance_path in pathlib.Path('../instances_all').glob('*.pb'):
+        with instance_path.open(encoding=ENCODING) as f:
             (instance, profile) = pabutools.election.pabulib.parse_pabulib_from_string(f.read())
         instances = [instance]
         profiles = [profile]
@@ -53,10 +88,10 @@ def visualize(measure_id):
         i = 0
         allocG = [[], [], []]
         for results_name in results_names:
-            results_path = pathlib.Path('.').joinpath('election_results')
+            results_path = pathlib.Path('..').joinpath('election_results')
             results_path = results_path.joinpath(results_name)
             results_path = results_path.joinpath(instance_path.stem + '.json')
-            with results_path.open(encoding=encoding) as f:
+            with results_path.open(encoding=ENCODING) as f:
                 results_strings = json.load(f)
             results = []
             for pr_name in results_strings:

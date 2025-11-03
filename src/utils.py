@@ -1,12 +1,19 @@
-import pabutools.fractions
 import pabutools
-from pabutools.rules.cstv import *
 
+from pabutools.rules.cstv import (
+    cstv, 
+    select_project_gs, 
+    select_project_gsc, 
+    select_project_ge, 
+    CSTV_Combination
+)
+
+# Configuration
 pabutools.fractions.FRACTION = "float"
 
-encoding="utf-8-sig"
+ENCODING="utf-8-sig"
 
-sample_election_names = [
+SAMPLE_ELECTION_NAMES = [
     'france_toulouse_2019_',
     'poland_czestochowa_2020_',
     'poland_czestochowa_2024_',
@@ -33,12 +40,13 @@ sample_election_names = [
     'worldwide_mechanical-turk_utilities-8_',
 ]
 
-minimal_sample_election_names = [
+MINIMAL_SAMPLE_ELECTION_NAMES = [
     'poland_katowice_2023_',
     'poland_czestochowa_2024_',
     'poland_swiecie_2023_',
     'poland_warszawa_2024_',
 ]
+
 
 def balance_profile(instance, 
                     profile,
@@ -46,7 +54,19 @@ def balance_profile(instance,
                     adjust_cardinal_to_costs = False, 
                     adjust_approval_to_costs = False
                     ):
-
+    """
+        Turns profile to a cumulative one and adjusts its votes to make them equal to amount of value from budget assosiated with them
+        
+        Args:
+            instance (pabutools.election.instance.Instance): election instance
+            profile (pabutools.election.profile.cumulativeprofile.CumulativeProfile): election profile
+            adjust_cumulative_to_costs (bool): Scale cumulative ballots by project costs.
+            adjust_cardinal_to_costs (bool): Scale cardinal ballots by project costs.
+            adjust_approval_to_costs (bool): Scale approval ballots by project costs.
+            
+        Returns:
+            tuple: (instance, balanced_profile)
+    """
     budget_per_ballot = instance.budget_limit / len(profile)
     ballots = []
     empty_ballot_dict = {}
@@ -94,9 +114,17 @@ def balance_profile(instance,
     return (instance, profile)
 
 def read_path(path):
-    f = open(path, 'r', encoding=encoding)
-    (instance, profile) = pabutools.election.pabulib.parse_pabulib_from_string(f.read())
-    f.close()
+    """
+        Reads election and returns adjusted election
+        
+        Args:
+            path (str): path to election file 
+            
+        Returns:
+            tuple: (Instance, Profile)
+    """
+    with open(path, 'r', encoding=ENCODING) as f:
+        (instance, profile) = pabutools.election.pabulib.parse_pabulib_from_string(f.read())
 
     return (instance, profile)
 
@@ -105,6 +133,18 @@ def read_pb(path,
             adjust_cardinal_to_costs = False, 
             adjust_approval_to_costs = False
             ):
+    """
+        Reads election and returns adjusted cumulative election ready to be run by cstv
+        
+        Args:
+            path (str): path to election file 
+            adjust_cumulative_to_costs (bool): Scale cumulative ballots by project costs.
+            adjust_cardinal_to_costs (bool): Scale cardinal ballots by project costs.
+            adjust_approval_to_costs (bool): Scale approval ballots by project costs.
+            
+        Returns:
+            tuple: (Instance, Profile)
+    """
     (instance, profile) = read_path(path)
 
     return balance_profile(
@@ -116,6 +156,16 @@ def read_pb(path,
         )
 
 def greedy_s(instance, profile):
+    """
+        Calculates set of projects to fill election budget based on greedy by support rule
+        
+        Args:
+            instance (Instance): instance of election to be used
+            profile (Profile): profile of election to be used
+            
+        Returns:
+            tuple: set(Project)
+    """
     remaining_projects = set(instance)
     selected_projects = set()
     donations = [
@@ -137,6 +187,16 @@ def greedy_s(instance, profile):
     return selected_projects
 
 def greedy_sc(instance, profile):
+    """
+        Calculates set of projects to fill election budget based on greedy by support over cost rule
+        
+        Args:
+            instance (Instance): instance of election to be used
+            profile (Profile): profile of election to be used
+            
+        Returns:
+            set(Project)
+    """
     remaining_projects = set(instance)
     selected_projects = set()
     donations = [
@@ -158,6 +218,16 @@ def greedy_sc(instance, profile):
     return selected_projects
 
 def greedy_e(instance, profile):
+    """
+        Calculates set of projects to fill election budget based on greedy by excess rule
+        
+        Args:
+            instance (Instance): instance of election to be used
+            profile (Profile): profile of election to be used
+            
+        Returns:
+            set(Project)
+    """
     remaining_projects = set(instance)
     selected_projects = set()
     donations = [
@@ -179,6 +249,15 @@ def greedy_e(instance, profile):
     return selected_projects
 
 def __cstv_short(combination):
+    """
+        Creaters shorter version cstv function with combination already chosen
+        
+        Args:
+            combination (CSTV_Combination): version of cstv to use
+            
+        Returns:
+            function: (instance, profile) -> set(Project)
+    """
     def tmp(instance, profile):
         return cstv(instance=instance, profile=profile, combination=combination, verbose=False)
     return tmp
